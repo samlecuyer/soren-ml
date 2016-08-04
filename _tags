@@ -1,0 +1,2 @@
+true: package(sedlex)
+<{reader}.ml>: package(sedlex)

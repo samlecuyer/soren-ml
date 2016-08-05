@@ -67,11 +67,11 @@ let symbol_literal = [%sedlex.regexp? Compl(white_space| Chars "[]{}('\"`,;)")]
 let rec token buf =
   match%sedlex buf with
   | white_space -> token buf
+  | ';', Star any, (eof | '\n') -> token buf
   | '"' -> read_string (Buffer.create 0) buf
   | dec_int_lit -> IntNum (int_of_string @@ Utf8.lexeme @@ buf)
   | decimal_literal -> FloatNum (float_of_string @@ Utf8.lexeme @@ buf)
   | binary_literal | hex_literal | octal_literal -> IntNum (int_of_string @@ Utf8.lexeme @@ buf)
-  | "(*" -> read_comment buf
   | "{"    -> LBrace
   | "}"    -> RBrace
   | "["    -> LBrack
@@ -86,13 +86,14 @@ let rec token buf =
   | eof    -> EOF
   | Star symbol_literal -> Symbol (Utf8.lexeme buf)
   (* | any    -> raise (SyntaxError ("lexeing error: " ^ (Sedlexing.Utf8.lexeme buf))) *)
-  (* | _      -> failwith "unreachable" *)
-  | _ -> Symbol (Utf8.lexeme buf)
+  | _      -> failwith "unreachable"
+  (* | _ -> Symbol (Utf8.lexeme buf) *)
 
 and read_comment buf =
   match%sedlex buf with
   | "*)" -> token buf
   | any -> read_comment buf
+  | eof -> raise (SyntaxError "Close your comment before the file ends")
   | _ -> raise (SyntaxError "Unknown character")
 
 and read_string b buf =
@@ -131,7 +132,8 @@ let rec read_str str =
 and read_form parser =
     match parser.curr with
     | LParen -> read_list parser
-    | LBrace -> read_set parser
+    | LBrack -> read_vector parser
+    | LBrace -> read_map parser
     | _ -> read_atom parser
 
 and read_list parser =
@@ -144,15 +146,30 @@ and read_list parser =
     skip parser;
     Types.List (handle_elems [] parser)
 
-and read_set parser  =
+and read_vector parser =
     let rec handle_elems accum p =
         match p.curr with
-        | RBrace -> skip p; List.rev accum
+        | RBrack -> skip p; List.rev accum
         | EOF -> raise (SyntaxError "unexpected EOF")
         | _ -> handle_elems ((read_form p)::accum) p
     in
     skip parser;
-    Types.List (handle_elems [] parser)
+    Types.Vector (handle_elems [] parser)
+
+and read_map parser  =
+    let rec map_of_list l m =
+      match l with
+      | k :: v :: rest -> map_of_list rest (SMap.add k v m)
+      | [] -> m
+      | _ :: [] -> raise (SyntaxError "maps need an even number of keys")
+    and handle_elems accum p =
+        match p.curr with
+        | RBrace -> skip p; map_of_list (List.rev accum) SMap.empty
+        | EOF -> raise (SyntaxError "unexpected EOF")
+        | _ -> handle_elems ((read_form p)::accum) p
+    in
+    skip parser;
+    Types.Map (handle_elems [] parser)
 
 and read_atom p =
     match p.curr with
@@ -163,15 +180,5 @@ and read_atom p =
     | True     -> skip p; Types.Bool true
     | False    -> skip p; Types.Bool false
     | Nil      -> skip p; Types.Nil
-    | _ -> raise (SyntaxError "something else")
-
-
-
-
-
-
-
-
-
-
+    | _ -> raise (SyntaxError "unexpected token")
 

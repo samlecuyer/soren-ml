@@ -10,7 +10,9 @@ let rep str = print (eval (read str) "")
 let () =
     try
         while true do
-            print_string "user> ";
-            print_endline (rep (read_line ()));
+        	try
+	            print_string "user> ";
+	            print_endline (rep (read_line ()));
+	        with Types.SyntaxError e -> Printf.printf "SyntaxError: %s\n" e;
         done
     with End_of_file -> ()

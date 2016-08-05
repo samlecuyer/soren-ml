@@ -12,6 +12,7 @@ type t =
     | Number of number_tower
     | Symbol of string
     | Bool   of bool
+    | Fn     of (t list -> t)
     | Nil
 end = Types 
 and Value : sig

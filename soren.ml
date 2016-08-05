@@ -1,17 +1,50 @@
+module T = Types.Types
+
+module Env = Map.Make(String)
+
+let num_fun f = T.Fn
+    (function
+    | [T.Number (Types.Int a); T.Number (Types.Int b)] -> T.Number (Types.Int (f a b))
+    | _ -> raise (Invalid_argument "use ints"))
+
+let repl_env = Env.(empty
+    |> add "+" (num_fun ( + ))
+    |> add "-" (num_fun ( - ))
+    |> add "*" (num_fun ( * ))
+    |> add "/" (num_fun ( / ))
+)
 
 let read str = Reader.read_str str
-
-let eval ast env = ast
-
 let print expr = Printer.pr_str expr
 
-let rep str = print (eval (read str) "")
+let rec eval_ast ast env =
+    match ast with
+    | T.List l -> T.List (List.map (fun el -> eval el env) l)
+    | T.Symbol s -> (try Env.find s env with Not_found -> T.Nil)
+    | _ -> ast
+
+and eval ast env =
+    match ast with
+    (* empty list, just return it *)
+    | T.List [] -> ast
+    (* otherwise, evaluate the list *)
+    (* and call the first one with the others *)
+    | T.List l ->
+        (match eval_ast ast env with
+        | T.List (fn :: args) -> (match fn with
+            | T.Fn f -> f args
+            | _ -> raise (Invalid_argument "expected a function"))
+        | _ -> raise (Invalid_argument "expected a function"))
+    (* otherwise, just  *)
+    | _ -> eval_ast ast env
+
+let rep str = print (eval (read str) repl_env)
 
 let () =
     try
         while true do
         	try
-	            print_string "user> ";
+                print_string "user> ";
 	            print_endline (rep (read_line ()));
 	        with Types.SyntaxError e -> Printf.printf "SyntaxError: %s\n" e;
         done

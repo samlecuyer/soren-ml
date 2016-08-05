@@ -12,6 +12,7 @@ and pr_str = function
     | Types.Map m   -> Printf.sprintf "{%s}" (String.concat " " (SMap.fold pr_map m []))
     | Types.String s -> Printf.sprintf "<str>\"%s\"" s
     | Types.Number n -> pr_num n
-    | Types.Symbol s -> s
+    | Types.Symbol s -> "<sym>"^s
     | Types.Bool b   -> string_of_bool b
     | Types.Nil      -> "nil"
+    | Types.Fn _     -> "<native>"

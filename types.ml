@@ -11,6 +11,7 @@ type t =
     | String of string
     | Number of number_tower
     | Symbol of string
+    | Keyword of string
     | Bool   of bool
     | Fn     of (t list -> t)
     | Nil

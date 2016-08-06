@@ -176,6 +176,7 @@ and read_atom p =
     | String s -> skip p; Types.String s
     | IntNum n -> skip p; Types.Number (Int n)
     | FloatNum n -> skip p; Types.Number (Float n)
+    | Symbol s when s.[0] = ':' -> skip p; Types.Keyword s
     | Symbol s -> skip p; Types.Symbol s
     | True     -> skip p; Types.Bool true
     | False    -> skip p; Types.Bool false

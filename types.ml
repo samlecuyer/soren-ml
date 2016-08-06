@@ -27,4 +27,8 @@ and SMap : Map.S with type key = Value.t = Map.Make(Value)
 
 type t = Value.t
 
+let to_bool = function
+    | Types.Nil | Types.Bool false -> Types.Bool false
+    | _ -> Types.Bool true
+
 exception SyntaxError of string

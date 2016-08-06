@@ -5,14 +5,10 @@ let num_fun f = (T.Fn
     | [T.Number (Types.Int a); T.Number (Types.Int b)] -> T.Number (Types.Int (f a b))
     | _ -> raise (Invalid_argument "use ints")))
 
-let repl_env = Env.make None;;
 
-begin
-    Env.set repl_env (T.Symbol "+") (num_fun ( + ));
-    Env.set repl_env (T.Symbol "-") (num_fun ( - ));
-    Env.set repl_env (T.Symbol "*") (num_fun ( * ));
-    Env.set repl_env (T.Symbol "/") (num_fun ( / ));
-end
+let repl_env = Env.make None 
+[ (T.Symbol "+"); (T.Symbol "-"); (T.Symbol "*"); (T.Symbol "/")] 
+[ (num_fun ( + )); (num_fun ( - )); (num_fun ( * )); (num_fun ( / ))]
 
 let read str = Reader.read_str str
 let print expr = Printer.pr_str expr
@@ -29,12 +25,25 @@ and eval ast env =
     match ast with
     (* empty list, just return it *)
     | T.List [] -> ast
-    (* otherwise, evaluate the list *)
-    (* and call the first one with the others *)
+    (* special forms *)
+    | T.List ((T.Symbol "do")::expr::rest) ->
+        List.fold_left (fun _ x -> eval_ast x env) (eval_ast expr env) rest
+    | T.List [T.Symbol "if"; antecedent; consequent] ->
+        (match Types.to_bool (eval antecedent env) with
+        | T.Bool true -> eval consequent env
+        | _ -> T.Nil)
+    | T.List [T.Symbol "if"; antecedent; consequent; alt] ->
+        (match Types.to_bool (eval antecedent env) with
+        | T.Bool true -> eval consequent env
+        | _ -> eval alt env)
     | T.List [T.Symbol "def!"; key; expr] ->
         let v = eval expr env in
         Env.set env key v;
         v
+    | T.List [T.Symbol "fn*"; T.Vector bindings; expr] ->
+        T.Fn (fun args ->
+            let scope = Env.make (Some env) bindings args in
+            eval expr scope)
     | T.List [T.Symbol "let*"; T.List bindings; expr] ->
         let rec bind_syms syms env =
             (match syms with
@@ -43,14 +52,14 @@ and eval ast env =
             | _ :: [] -> raise (Invalid_argument "bindings must be even")
             | [] -> ())
         in
-        let env = Env.make (Some env) in
+        let env = Env.make (Some env) [] [] in
         bind_syms bindings env;
         eval expr env
+    (* otherwise, evaluate the list *)
+    (* and call the first one with the others *)
     | T.List l ->
         (match eval_ast ast env with
-        | T.List (fn :: args) -> (match fn with
-            | T.Fn f -> f args
-            | _ -> raise (Invalid_argument "expected a function"))
+        | T.List ((T.Fn f) :: args) -> (f args)
         | _ -> raise (Invalid_argument "expected a function"))
     (* otherwise, just  *)
     | _ -> eval_ast ast env

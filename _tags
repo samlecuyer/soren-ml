@@ -1,2 +1,3 @@
-true: package(sedlex)
+true: package(sedlex), package(ounit)
 <{reader}.ml>: package(sedlex)
+<tests>: package(ounit)

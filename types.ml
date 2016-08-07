@@ -1,4 +1,6 @@
 
+exception SyntaxError of string
+
 type number_tower =
     | Int of int
     | Float of float
@@ -31,4 +33,10 @@ let to_bool = function
     | Types.Nil | Types.Bool false -> Types.Bool false
     | _ -> Types.Bool true
 
-exception SyntaxError of string
+let rec is_equal a b =
+	match (a, b) with
+	| (Types.List a, Types.List b) -> is_list_equal a b
+	| _ -> a = b
+
+and is_list_equal a b =
+	List.length a = List.length b && List.for_all2 is_equal a b

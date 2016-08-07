@@ -1,14 +1,8 @@
 module T = Types.Types
+module C = Core.Core
 
-let num_fun f = (T.Fn
-    (function
-    | [T.Number (Types.Int a); T.Number (Types.Int b)] -> T.Number (Types.Int (f a b))
-    | _ -> raise (Invalid_argument "use ints")))
-
-
-let repl_env = Env.make None 
-[ (T.Symbol "+"); (T.Symbol "-"); (T.Symbol "*"); (T.Symbol "/")] 
-[ (num_fun ( + )); (num_fun ( - )); (num_fun ( * )); (num_fun ( / ))]
+let repl_env = Env.make None [] [];;
+C.iter (fun k v -> Env.set repl_env (T.Symbol k) v) Core.ns;;
 
 let read str = Reader.read_str str
 let print expr = Printer.pr_str expr

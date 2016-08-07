@@ -47,12 +47,12 @@ let to_str = function
 let dec_digit       = [%sedlex.regexp? '0'..'9']
 let dec_digits      = [%sedlex.regexp? Star dec_digit]
 let dec_digit_nz    = [%sedlex.regexp? '1'..'9']
-let dec_int_lit     = [%sedlex.regexp? '0' | (dec_digit_nz, Opt dec_digits)]
+let dec_int_lit     = [%sedlex.regexp? Opt '-', ('0' | (dec_digit_nz, Opt dec_digits))]
 let exponent_part   = [%sedlex.regexp? ('e' | 'E'), Opt ('-'|'+'), dec_digits]
 let decimal_literal1 = [%sedlex.regexp? dec_int_lit, '.', Opt dec_digits, Opt exponent_part]
 let decimal_literal2 = [%sedlex.regexp? '.', Plus dec_digit, Opt exponent_part]
 let decimal_literal3 = [%sedlex.regexp? dec_int_lit, Opt exponent_part]
-let decimal_literal = [%sedlex.regexp?  decimal_literal1|decimal_literal2|decimal_literal3]
+let decimal_literal = [%sedlex.regexp?  Opt '-', (decimal_literal1|decimal_literal2|decimal_literal3)]
 (* regexes for binary integer literal *)
 let binary_literal = [%sedlex.regexp? ("0b"|"0B"), Star ('0'|'1')]
 (* regexes for hex integer literal *)
@@ -60,8 +60,6 @@ let hex_digit = [%sedlex.regexp? '0'..'9' | 'a'..'f' | 'A'..'F']
 let hex_literal = [%sedlex.regexp? ("0x"|"0X"), Star hex_digit]
 (* regexes for octal integer literal *)
 let octal_literal = [%sedlex.regexp? ("0o"|"0O"), Star ('0'..'7')]
-let numeric_literal = [%sedlex.regexp?
-decimal_literal|binary_literal|hex_literal|octal_literal]
 let symbol_literal = [%sedlex.regexp? Compl(white_space| Chars "[]{}('\"`,;)")]
 
 let rec token buf =

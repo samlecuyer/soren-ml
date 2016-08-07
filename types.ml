@@ -36,6 +36,7 @@ let to_bool = function
 let rec is_equal a b =
 	match (a, b) with
 	| (Types.List a, Types.List b) -> is_list_equal a b
+	| (Types.Map a, Types.Map b) -> SMap.equal is_equal a b
 	| _ -> a = b
 
 and is_list_equal a b =

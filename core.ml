@@ -7,6 +7,11 @@ let num_fun f = (T.Fn
     | [T.Number (Types.Int a); T.Number (Types.Int b)] -> T.Number (Types.Int (f a b))
     | _ -> raise (Invalid_argument "use ints")))
 
+let num_bool_fun f = (T.Fn
+    (function
+    | [T.Number (Types.Int a); T.Number (Types.Int b)] -> T.Bool (f a b)
+    | _ -> raise (Invalid_argument "use ints")))
+
 let print_fun = (T.Fn
 	(function
 	| any::_ -> print_endline (Printer.pr_str any); T.Nil
@@ -42,6 +47,10 @@ let ns = Core.(empty
 	|> add "-" (num_fun ( - ))
 	|> add "*" (num_fun ( * ))
 	|> add "/" (num_fun ( / ))
+	|> add ">" (num_bool_fun ( > ))
+	|> add ">=" (num_bool_fun ( >= ))
+	|> add "<" (num_bool_fun ( < ))
+	|> add "<=" (num_bool_fun ( <= ))
 	|> add "prn" print_fun
 	|> add "list" to_list
 	|> add "is_list?" is_list

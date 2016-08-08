@@ -5,7 +5,7 @@ let repl_env = Env.make None [] [];;
 C.iter (fun k v -> Env.set repl_env (T.Symbol k) v) Core.ns;;
 
 let read str = Reader.read_str str
-let print expr = Printer.pr_str expr
+let print expr = Printer.pr_str expr false
 
 let rec eval_ast ast env =
     match ast with
@@ -34,7 +34,8 @@ and eval ast env =
         let v = eval expr env in
         Env.set env key v;
         v
-    | T.List [T.Symbol "fn*"; T.Vector bindings; expr] ->
+    | T.List [T.Symbol "fn*"; T.Vector bindings; expr]
+    | T.List [T.Symbol "fn*"; T.List bindings; expr] ->
         T.Fn (fun args ->
             let scope = Env.make (Some env) bindings args in
             eval expr scope)
@@ -54,7 +55,7 @@ and eval ast env =
     | T.List l ->
         (match eval_ast ast env with
         | T.List ((T.Fn f) :: args) -> (f args)
-        | _ -> raise (Invalid_argument "expected a function"))
+        | _ -> raise (Invalid_argument ("could not apply: " ^ (print ast))))
     (* otherwise, just  *)
     | _ -> eval_ast ast env
 

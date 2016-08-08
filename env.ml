@@ -6,7 +6,21 @@ type t = {
     data: Types.t Env.t ref
 }
 
-let rec make outer binds exprs = 
+let rec make_variadic outer binds exprs = 
+    let env = {outer = outer; data = ref Env.empty} in
+    let rec bind_variadic binds exprs =
+        match (binds, exprs) with
+        | ((T.Symbol "&")::last::_, rest) -> set env last (T.List rest);
+        | (k::bindings, v::exprs) -> 
+            set env k v;
+            bind_variadic bindings exprs;
+        | ((T.Symbol "&")::[], _) -> raise (Types.SyntaxError "& must be a tail position");
+        | (heads, tails) -> raise (Types.SyntaxError (Printer.pr_str (T.List heads) false));
+    in
+    bind_variadic binds exprs;
+    env
+
+and make outer binds exprs = 
     let env = {outer = outer; data = ref Env.empty} in
     List.iter2 (fun k v -> set env k v) binds exprs;
     env

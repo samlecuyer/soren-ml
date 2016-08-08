@@ -37,7 +37,7 @@ and eval ast env =
     | T.List [T.Symbol "fn*"; T.Vector bindings; expr]
     | T.List [T.Symbol "fn*"; T.List bindings; expr] ->
         T.Fn (fun args ->
-            let scope = Env.make (Some env) bindings args in
+            let scope = Env.make_variadic (Some env) bindings args in
             eval expr scope)
     | T.List [T.Symbol "let*"; T.List bindings; expr] ->
         let rec bind_syms syms env =

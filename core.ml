@@ -18,6 +18,11 @@ let sn_print = (T.Fn
 	| any::_ -> print_endline (Printer.pr_str any true); T.Nil
 	| [] -> T.Nil))
 
+let sn_str = (T.Fn
+	(fun args ->
+		let prr_str ast = Printer.pr_str ast false in
+	 	T.String (String.concat " " (List.map prr_str args))))
+
 let sn_list = T.Fn (fun l -> T.List l)
 
 let sn_is_list = T.Fn
@@ -56,6 +61,7 @@ let ns = Core.(empty
 	|> add "<=" (num_bool_fun ( <= ))
 	(* other core functions *)
 	|> add "prn"      sn_print
+	|> add "str"      sn_str
 	|> add "list"     sn_list
 	|> add "is_list?" sn_is_list
 	|> add "empty?"   sn_empty

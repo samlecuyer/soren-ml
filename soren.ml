@@ -59,10 +59,17 @@ and eval ast env =
     (* otherwise, just  *)
     | _ -> eval_ast ast env
 
-let rep str = print (eval (read str) repl_env)
+let rep str = print (eval (read str) repl_env);;
+
+Env.set repl_env (T.Symbol "eval") (T.Fn
+    (function
+    | arg::_ -> eval arg repl_env
+    | _ -> T.Nil));;
+
 
 let () =
     try
+        rep "(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \")\")))))";
         while true do
         	try
                 print_string "user> ";

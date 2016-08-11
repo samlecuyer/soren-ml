@@ -1,4 +1,5 @@
 
+open Numeric
 open Types
 open Sedlexing
 
@@ -123,6 +124,12 @@ let skip p = ignore(next p)
 
 let rec read_str str =
     let lexer = Utf8.from_string str in
+    let parser = create lexer in
+    skip parser;
+    read_form parser
+
+and read_channel chan =
+    let lexer = Utf8.from_channel chan in
     let parser = create lexer in
     skip parser;
     read_form parser

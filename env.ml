@@ -10,12 +10,20 @@ let rec make_variadic outer binds exprs =
     let env = {outer = outer; data = ref Env.empty} in
     let rec bind_variadic binds exprs =
         match (binds, exprs) with
+        (* if there's a &, the next symbol binds rest *)
         | ((T.Symbol "&")::last::_, rest) -> set env last (T.List rest);
+        (* but there needs to be a next symbol *)
+        | ((T.Symbol "&")::[], _) -> raise (Types.SyntaxError "& must be a tail position");
+        (* otherwise, just keep binding *)
         | (k::bindings, v::exprs) -> 
             set env k v;
             bind_variadic bindings exprs;
-        | ((T.Symbol "&")::[], _) -> raise (Types.SyntaxError "& must be a tail position");
-        | (heads, tails) -> raise (Types.SyntaxError (Printer.pr_str (T.List heads) false));
+        (* but if we're out of values, bind nil *)
+        | (k::bindings, []) -> 
+            set env k T.Nil;
+            bind_variadic bindings exprs;
+        (* and if we're out of bindings, just skip the rest *)
+        | ([], _) -> ();
     in
     bind_variadic binds exprs;
     env

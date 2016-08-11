@@ -1,17 +1,13 @@
 
 exception SyntaxError of string
 
-type number_tower =
-    | Int of int
-    | Float of float
-
 module rec Types : sig
 type t =
     | List   of t list
     | Vector of t list
     | Map    of t SMap.t
     | String of string
-    | Number of number_tower
+    | Number of Numeric.t
     | Symbol of string
     | Keyword of string
     | Bool   of bool

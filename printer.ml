@@ -1,8 +1,11 @@
 open Types
+open Numeric
 
 let rec pr_num = function
     | Int i -> string_of_int i
     | Float f -> string_of_float f
+    | Ratio (n, d) -> Printf.sprintf "%d/%d" n d
+    | Complex (r, i) -> Printf.sprintf "%s+%si" (pr_num r) (pr_num i)
 
 let rec pr_map k d accum readably = (pr_str k readably)::(pr_str d readably)::accum
 

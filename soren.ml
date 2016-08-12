@@ -1,8 +1,8 @@
 module T = Types.Types
-module C = Core.Core
+module C = Core_sn.Core
 
 let repl_env = Env.make None [] [];;
-C.iter (fun k v -> Env.set repl_env (T.Symbol k) v) Core.ns;;
+C.iter (fun k v -> Env.set repl_env (T.Symbol k) v) Core_sn.ns;;
 
 let read str = Reader.read_str str
 
@@ -50,7 +50,8 @@ and eval ast env =
         T.Fn (fun args ->
             let scope = Env.make_variadic (Some env) bindings args in
             eval expr scope)
-    | T.List [T.Symbol "let*"; T.List bindings; expr] ->
+    | T.List [T.Symbol "let*"; T.List bindings; expr]
+    | T.List [T.Symbol "let*"; T.Vector bindings; expr] ->
         let rec bind_syms syms env =
             (match syms with
             | k :: expr :: rest ->
@@ -66,6 +67,7 @@ and eval ast env =
     | T.List l ->
         (match eval_ast ast env with
         | T.List ((T.Fn f) :: args) -> (f args)
+        | T.List ((T.Map m) :: key :: _) -> (try Types.SnMap.find key m with _ -> T.Nil)
         | _ -> raise (Invalid_argument ("could not apply: " ^ (print ast))))
     (* otherwise, just  *)
     | _ -> eval_ast ast env
@@ -77,16 +79,22 @@ Env.set repl_env (T.Symbol "eval") (T.Fn
     | arg::_ -> eval arg repl_env
     | _ -> T.Nil));;
 
+let rec do_repl () = 
+    try
+        match Core_extended.Readline.input_line () with
+        | Some s -> 
+            Printf.printf "=> %s\n" (rep s);
+            do_repl ()
+        | None -> print_endline "goodbye";
+    with 
+    | Invalid_argument e
+    | Types.SyntaxError e
+    | Types.RuntimeError e -> Printf.printf "Error: %s\n" e; do_repl ()
 
 let () =
     try
         let _ = rep "(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \")\")))))" in
-        while true do
-        	try
-                print_string "user> ";
-	            Printf.printf "=> %s\n" (rep (read_line ()));
-	        with 
-            | Types.SyntaxError e -> Printf.printf "SyntaxError: %s\n" e;
-            | Types.RuntimeError e -> Printf.printf "RuntimeError: %s\n" e;
-        done
-    with End_of_file -> ()
+        let args = Array.map (fun s -> T.String s) Sys.argv in 
+        Env.set repl_env (T.Symbol "*argv*") (T.List (Array.to_list args));
+        do_repl ()
+    with _ -> ()

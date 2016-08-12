@@ -3,9 +3,10 @@ module T = Types.Types
 module Core = Map.Make(String)
 
 (* TODO: support the full numeric stack *)
-let num_fun f = (T.Fn
+let rec num_fun f = (T.Fn
     (function
     | [T.Number (Numeric.Int a); T.Number (Numeric.Int b)] -> T.Number (Numeric.Int (f a b))
+    | [] -> (num_fun f)
     | _ -> raise (Invalid_argument "use ints")))
 
 let num_bool_fun f = (T.Fn
@@ -56,6 +57,7 @@ let sn_empty = T.Fn
     (function
     | (T.List [])::_ -> (T.Bool true)
     | (T.Vector [])::_ -> (T.Bool true)
+    | (T.Map m)::_ -> (T.Bool (Types.SnMap.is_empty m))
     | _ -> (T.Bool false))
 
 let sn_count = (T.Fn
@@ -65,9 +67,7 @@ let sn_count = (T.Fn
     | _ -> (T.Number (Numeric.Int 0))))
 
 let sn_cons = (T.Fn Types.cons)
-
 let sn_concat = (T.Fn Types.concat)
-
 
 let sn_equal = T.Fn
     (function
@@ -85,11 +85,22 @@ let ns = Core.(empty
 	|> add ">=" (num_bool_fun ( >= ))
 	|> add "<"  (num_bool_fun ( < ))
 	|> add "<=" (num_bool_fun ( <= ))
+    (* type predicates *)
+    |> add "list?"    (sn_unary_pred Types.is_list)
+    |> add "vector?"  (sn_unary_pred Types.is_vector)
+    |> add "map?"     (sn_unary_pred Types.is_map)
+    |> add "string?"  (sn_unary_pred Types.is_string)
+    |> add "number?"  (sn_unary_pred Types.is_number)
+    |> add "symbol?"  (sn_unary_pred Types.is_symbol)
+    |> add "keyword?" (sn_unary_pred Types.is_keyword)
+    (* |> add "fn?"      (sn_unary_pred Types.is_fn) *)
+    |> add "atom?"    (sn_unary_pred Types.is_atom)
+    |> add "nil?"     (sn_unary_pred Types.is_nil)
 	(* other core functions *)
 	|> add "prn"      (sn_unary sn_print)
 	|> add "str"      sn_str
 	|> add "list"     sn_list
-	|> add "list?"    (sn_unary_pred Types.is_list)
+	
 	|> add "empty?"   sn_empty
 	|> add "count"    sn_count
 	|> add "="        sn_equal
@@ -98,7 +109,6 @@ let ns = Core.(empty
     |> add "slurp"    sn_slurp
     (* atoms *)
     |> add "atom"     (sn_unary sn_atom)
-    |> add "atom?"    (sn_unary_pred Types.is_atom)
     |> add "cons"     sn_cons
     |> add "concat"   sn_concat
 )

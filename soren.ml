@@ -5,23 +5,34 @@ let repl_env = Env.make None [] [];;
 C.iter (fun k v -> Env.set repl_env (T.Symbol k) v) Core.ns;;
 
 let read str = Reader.read_str str
+
 let print expr = Printer.pr_str expr false
 
 let rec eval_ast ast env =
     match ast with
     | T.List l -> T.List (List.map (fun el -> eval el env) l)
     | T.Vector l -> T.Vector (List.map (fun el -> eval el env) l)
-    | T.Map l -> T.Map (Types.SMap.map (fun v -> eval v env) l)
+    | T.Map l -> T.Map (Types.SnMap.map (fun v -> eval v env) l)
     | T.Symbol s -> (try Env.get env ast with Not_found -> T.Nil)
     | _ -> ast
+
+and quasiquote = function
+    | T.List [T.Symbol "unquote"; ast] -> ast
+    | T.List ((T.List [T.Symbol "splice-unquote"; ast])::rest) ->
+        T.List [T.Symbol "concat"; ast; quasiquote (T.List rest)]
+    | T.List (ast::rest) ->
+        T.List [T.Symbol "cons"; quasiquote ast; quasiquote (T.List rest)]
+    | ast -> T.List [T.Symbol "quote"; ast]
 
 and eval ast env =
     match ast with
     (* empty list, just return it *)
     | T.List [] -> ast
     (* special forms *)
-    | T.List ((T.Symbol "do")::expr::rest) ->
-        List.fold_left (fun _ x -> eval_ast x env) (eval_ast expr env) rest
+    | T.List [T.Symbol "quote"; form] -> form
+    | T.List [T.Symbol "quasiquote"; form] -> eval (quasiquote form) env
+    | T.List ((T.Symbol "do")::stmts) ->
+        List.fold_left (fun _ x -> eval x env) T.Nil stmts
     | T.List [T.Symbol "if"; antecedent; consequent] ->
         (match Types.to_bool (eval antecedent env) with
         | T.Bool true -> eval consequent env
@@ -69,11 +80,13 @@ Env.set repl_env (T.Symbol "eval") (T.Fn
 
 let () =
     try
-        rep "(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \")\")))))";
+        let _ = rep "(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \")\")))))" in
         while true do
         	try
                 print_string "user> ";
-	            print_endline (rep (read_line ()));
-	        with Types.SyntaxError e -> Printf.printf "SyntaxError: %s\n" e;
+	            Printf.printf "=> %s\n" (rep (read_line ()));
+	        with 
+            | Types.SyntaxError e -> Printf.printf "SyntaxError: %s\n" e;
+            | Types.RuntimeError e -> Printf.printf "RuntimeError: %s\n" e;
         done
     with End_of_file -> ()

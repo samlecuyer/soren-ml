@@ -77,6 +77,10 @@ let rec token buf =
   | "]"    -> RBrack
   | "("    -> LParen
   | ")"    -> RParen
+  | "'"    -> Quote
+  | "`"    -> Backtick
+  | "~@"   -> TildeAt
+  | "~"    -> Tilde
 
   | "true"  -> True
   | "false" -> False
@@ -84,8 +88,8 @@ let rec token buf =
 
   | eof    -> EOF
   | Star symbol_literal -> Symbol (Utf8.lexeme buf)
-  (* | any    -> raise (SyntaxError ("lexeing error: " ^ (Sedlexing.Utf8.lexeme buf))) *)
-  | _      -> failwith "unreachable"
+  | _    -> raise (SyntaxError ("lexeing error: " ^ (Sedlexing.Utf8.lexeme buf)))
+  (* | _      -> failwith "unreachable" *)
   (* | _ -> Symbol (Utf8.lexeme buf) *)
 
 and read_comment buf =
@@ -139,6 +143,11 @@ and read_form parser =
     | LParen -> read_list parser
     | LBrack -> read_vector parser
     | LBrace -> read_map parser
+    (* reader macros *)
+    | Quote    -> skip parser; Types.List [Types.Symbol "quote"; read_form parser]
+    | Backtick -> skip parser; Types.List [Types.Symbol "quasiquote"; read_form parser]
+    | Tilde    -> skip parser; Types.List [Types.Symbol "unquote"; read_form parser]
+    | TildeAt  -> skip parser; Types.List [Types.Symbol "unquote-splice"; read_form parser]
     | _ -> read_atom parser
 
 and read_list parser =
@@ -164,12 +173,12 @@ and read_vector parser =
 and read_map parser  =
     let rec map_of_list l m =
       match l with
-      | k :: v :: rest -> map_of_list rest (SMap.add k v m)
+      | k :: v :: rest -> map_of_list rest (SnMap.add k v m)
       | [] -> m
       | _ :: [] -> raise (SyntaxError "maps need an even number of keys")
     and handle_elems accum p =
         match p.curr with
-        | RBrace -> skip p; map_of_list (List.rev accum) SMap.empty
+        | RBrace -> skip p; map_of_list (List.rev accum) SnMap.empty
         | EOF -> raise (SyntaxError "unexpected EOF")
         | _ -> handle_elems ((read_form p)::accum) p
     in
@@ -186,5 +195,8 @@ and read_atom p =
     | True     -> skip p; Types.Bool true
     | False    -> skip p; Types.Bool false
     | Nil      -> skip p; Types.Nil
-    | _ -> raise (SyntaxError "unexpected token")
+    | _ -> raise (
+        let message = (Utf8.lexeme p.lexbuf) in
+        SyntaxError ("unexpected token: " ^ message)
+    )
 

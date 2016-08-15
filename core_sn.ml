@@ -9,6 +9,20 @@ let rec num_fun f = (T.Fn
     | [] -> (num_fun f)
     | _ -> raise (Invalid_argument "use ints")))
 
+let raise_num = function
+    | T.Number n -> n
+    | _ -> Numeric.NaN
+
+let raised_num_fun f = (T.Fn
+    (function
+    | hd::rest ->
+        T.Number (List.fold_left
+            (fun acc x -> f acc (raise_num x))
+            (raise_num hd)
+            rest)
+    | [] -> raise (Invalid_argument "numeric args must take a parameter")))
+
+
 let num_bool_fun f = (T.Fn
     (function
     | [T.Number (Numeric.Int a); T.Number (Numeric.Int b)] -> T.Bool (f a b)
@@ -76,7 +90,7 @@ let sn_equal = T.Fn
 
 let ns = Core.(empty
 	(* simple math functions *)
-	|> add "+" (num_fun ( + ))
+	|> add "+" (raised_num_fun Numeric.add)
 	|> add "-" (num_fun ( - ))
 	|> add "*" (num_fun ( * ))
 	|> add "/" (num_fun ( / ))

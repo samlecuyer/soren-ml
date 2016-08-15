@@ -5,6 +5,7 @@ let replace_quotes = Str.global_replace (Str.regexp "\"") "\\\""
 let replace_newlin = Str.global_replace (Str.regexp "\n") "\\n"
 
 let rec pr_num = function
+    | NaN -> "NaN"
     | Int i -> string_of_int i
     | Float f -> string_of_float f
     | Ratio (n, d) -> Printf.sprintf "%d/%d" n d

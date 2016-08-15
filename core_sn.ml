@@ -3,7 +3,7 @@ module T = Types.Types
 module Core = Map.Make(String)
 
 (* TODO: support the full numeric stack *)
-let rec num_fun f = (T.Fn
+let rec num_fun f = (Types.fn
     (function
     | [T.Number (Numeric.Int a); T.Number (Numeric.Int b)] -> T.Number (Numeric.Int (f a b))
     | [] -> (num_fun f)
@@ -13,7 +13,7 @@ let raise_num = function
     | T.Number n -> n
     | _ -> Numeric.NaN
 
-let raised_num_fun f = (T.Fn
+let raised_num_fun f = (Types.fn
     (function
     | hd::rest ->
         T.Number (List.fold_left
@@ -23,17 +23,17 @@ let raised_num_fun f = (T.Fn
     | [] -> raise (Invalid_argument "numeric args must take a parameter")))
 
 
-let num_bool_fun f = (T.Fn
+let num_bool_fun f = (Types.fn
     (function
     | [T.Number (Numeric.Int a); T.Number (Numeric.Int b)] -> T.Bool (f a b)
     | _ -> raise (Invalid_argument "use ints")))
 
-let sn_unary f = (T.Fn
+let sn_unary f = (Types.fn
     (function
     | hd::_ -> f hd
     | [] -> T.Nil))
 
-let sn_unary_pred f = (T.Fn
+let sn_unary_pred f = (Types.fn
     (function
     | hd::_ -> T.Bool (f hd)
     | _ -> T.Bool false))
@@ -48,7 +48,7 @@ let sn_read_str = function
     | T.String s -> Reader.read_str s
     | _ -> T.Nil
 
-let sn_slurp = (T.Fn
+let sn_slurp = (Types.fn
     (function
     | (T.String s)::_ -> 
         (try
@@ -60,30 +60,73 @@ let sn_slurp = (T.Fn
         with e -> raise e)
     | _ -> T.Nil))
 
-let sn_str = (T.Fn
+let sn_str = (Types.fn
 	(fun args ->
 		let prr_str ast = Printer.pr_str ast false in
 	 	T.String (String.concat " " (List.map prr_str args))))
 
-let sn_list = T.Fn (fun l -> T.List l)
+let sn_list = Types.fn (fun l -> T.List l)
 
-let sn_empty = T.Fn
+let sn_rest = Types.fn 
+    (function
+    | (T.List (_::rest))::_ -> Types.list rest
+    | (T.List [])::_ -> Types.list []
+    | _ -> raise (Invalid_argument "should take a list"))
+
+let sn_first = Types.fn 
+    (function
+    | (T.List (hd::_))::_ -> hd
+    | (T.List [])::_ -> T.Nil
+    | _ -> raise (Invalid_argument "should take a list and number"))
+
+let sn_nth = Types.fn 
+    (function
+    | [T.List lst; T.Number (Numeric.Int n)] -> 
+        try List.nth lst n with _ -> raise (Invalid_argument "out of range")
+    | _ -> raise (Invalid_argument "should take a list and number"))
+
+let sn_empty = Types.fn
     (function
     | (T.List [])::_ -> (T.Bool true)
     | (T.Vector [])::_ -> (T.Bool true)
     | (T.Map m)::_ -> (T.Bool (Types.SnMap.is_empty m))
     | _ -> (T.Bool false))
 
-let sn_count = (T.Fn
+let sn_bindings = Types.fn
+    (function
+    | (T.Map m)::_ -> Types.list (List.map (fun (k, v) -> k) (Types.SnMap.bindings m))
+    | _ -> T.Nil)
+
+let sn_map = Types.fn
+    (function
+    | T.Fn {value = f}::arg::_ ->
+        (match arg with
+        | T.List l -> Types.list (List.map (fun x -> f [x]) l)
+        | T.Vector l -> Types.vector (List.map (fun x -> f [x]) l)
+        | T.Map m -> Types.map (Types.SnMap.map (fun x -> f [x]) m)
+        | _ -> raise (Invalid_argument "unimplementd"))
+    | _ -> raise (Invalid_argument "map takes a function and a list"))
+
+(* let sn_apply = Types.fn
+    (function
+    | T.Fn {value = f}::arg ->
+        (match arg with
+        | T.List l -> Types.list (List.map (fun x -> f [x]) l)
+        | T.Vector l -> Types.vector (List.map (fun x -> f [x]) l)
+        | T.Map m -> Types.map (Types.SnMap.map (fun x -> f [x]) m)
+        | _ -> raise (Invalid_argument "unimplementd"))
+    | _ -> raise (Invalid_argument "map takes a function and a list"))
+ *)
+let sn_count = (Types.fn
     (function
     | (T.List l)::_ -> (T.Number (Numeric.Int (List.length l)))
     | (T.Vector l)::_ -> (T.Number (Numeric.Int (List.length l)))
     | _ -> (T.Number (Numeric.Int 0))))
 
-let sn_cons = (T.Fn Types.cons)
-let sn_concat = (T.Fn Types.concat)
+let sn_cons = (Types.fn Types.cons)
+let sn_concat = (Types.fn Types.concat)
 
-let sn_equal = T.Fn
+let sn_equal = Types.fn
     (function
     | [a; b] -> T.Bool (Types.is_equal a b)
     | _ -> raise (Invalid_argument "use ints"))
@@ -125,4 +168,9 @@ let ns = Core.(empty
     |> add "atom"     (sn_unary sn_atom)
     |> add "cons"     sn_cons
     |> add "concat"   sn_concat
+    |> add "first"   sn_first
+    |> add "rest"   sn_rest
+    |> add "nth" sn_nth
+    |> add "map" sn_map
+    |> add "keys" sn_bindings
 )

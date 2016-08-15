@@ -61,7 +61,7 @@ let hex_digit = [%sedlex.regexp? '0'..'9' | 'a'..'f' | 'A'..'F']
 let hex_literal = [%sedlex.regexp? ("0x"|"0X"), Star hex_digit]
 (* regexes for octal integer literal *)
 let octal_literal = [%sedlex.regexp? ("0o"|"0O"), Star ('0'..'7')]
-let symbol_literal = [%sedlex.regexp? Compl(white_space| Chars "[]{}('\"`,;)")]
+let symbol_literal = [%sedlex.regexp? Compl(white_space| Chars "[]{}('\"`,;)~@")]
 
 let rec token buf =
   match%sedlex buf with
@@ -147,7 +147,7 @@ and read_form parser =
     | Quote    -> skip parser; Types.List [Types.Symbol "quote"; read_form parser]
     | Backtick -> skip parser; Types.List [Types.Symbol "quasiquote"; read_form parser]
     | Tilde    -> skip parser; Types.List [Types.Symbol "unquote"; read_form parser]
-    | TildeAt  -> skip parser; Types.List [Types.Symbol "unquote-splice"; read_form parser]
+    | TildeAt  -> skip parser; Types.List [Types.Symbol "splice-unquote"; read_form parser]
     | _ -> read_atom parser
 
 and read_list parser =

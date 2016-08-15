@@ -3,7 +3,8 @@ exception SyntaxError of string
 exception RuntimeError of string
 
 module rec Types : sig
-type t =
+    type 'a with_meta = {value : 'a; meta: t}   
+    and t =
     | List   of t list
     | Vector of t list
     | Map    of t SnMap.t
@@ -12,7 +13,7 @@ type t =
     | Symbol of string
     | Keyword of string
     | Bool   of bool
-    | Fn     of (t list -> t)
+    | Fn     of (t list -> t) with_meta
     | Atom   of t ref
     | Nil
 end = Types 
@@ -29,9 +30,16 @@ and SnMap : Map.S with type key = Value.t = Map.Make(Value)
 
 type t = Value.t
 
+let list    a = Types.List a
+let vector  a = Types.Vector a
+let map     a = Types.Map a
+let symbol  a = Types.Symbol a
+let keyword a = Types.Keyword a
+let fn      f = Types.Fn { value = f; meta = Types.Nil }
+
 let to_bool = function
-    | Types.Nil | Types.Bool false -> Types.Bool false
-    | _ -> Types.Bool true
+    | Types.Nil | Types.Bool false -> false
+    | _ -> true
 
 let rec is_equal a b =
 	match (a, b) with

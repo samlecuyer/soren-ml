@@ -1,4 +1,4 @@
-true: package(sedlex), package(ounit), package(str), package(core_extended), thread
+true: package(sedlex), package(ounit), package(str)
 <{reader}.ml>: package(sedlex)
 <{printer}.ml>: package(str)
 <tests>: package(ounit)
